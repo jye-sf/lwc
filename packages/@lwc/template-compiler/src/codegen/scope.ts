@@ -7,9 +7,33 @@
 import { walk } from 'estree-walker';
 
 import * as t from '../shared/estree';
-import { TEMPLATE_PARAMS } from '../shared/constants';
+// import { TEMPLATE_PARAMS } from '../shared/constants';
 import { isComponentProp } from '../shared/ir';
-import { IRNode, TemplateExpression } from '../shared/types';
+import { IRNode, TemplateExpression, TemplateIdentifier } from '../shared/types';
+
+const usedProps = new Map<string, string>();
+
+function getPropName(identifier: TemplateIdentifier): string {
+    const { name } = identifier;
+    let memoizedPropName = usedProps.get(name);
+
+    if (!memoizedPropName) {
+        memoizedPropName = `$cv${usedProps.size}`;
+        usedProps.set(name, memoizedPropName);
+    }
+
+    return memoizedPropName;
+}
+
+export function getUsedComponentProperties(): { [name: string]: t.Identifier } {
+    const result: { [name: string]: t.Identifier } = {};
+
+    usedProps.forEach((cp, memoizedName) => {
+        result[memoizedName] = t.identifier(cp);
+    });
+
+    return result;
+}
 
 /**
  * Bind the passed expression to the component instance. It applies the following transformation to the expression:
@@ -19,7 +43,8 @@ import { IRNode, TemplateExpression } from '../shared/types';
 export function bindExpression(expression: TemplateExpression, irNode: IRNode): t.Expression {
     if (t.isIdentifier(expression)) {
         if (isComponentProp(expression, irNode)) {
-            return t.memberExpression(t.identifier(TEMPLATE_PARAMS.INSTANCE), expression);
+            return t.identifier(getPropName(expression));
+            // return t.memberExpression(t.identifier(TEMPLATE_PARAMS.INSTANCE), expression);
         } else {
             return expression;
         }
@@ -34,7 +59,8 @@ export function bindExpression(expression: TemplateExpression, irNode: IRNode): 
                 parent.object === node &&
                 isComponentProp(node, irNode)
             ) {
-                this.replace(t.memberExpression(t.identifier(TEMPLATE_PARAMS.INSTANCE), node));
+                this.replace(t.identifier(getPropName(node)));
+                // this.replace(t.memberExpression(t.identifier(TEMPLATE_PARAMS.INSTANCE), node));
             }
         },
     });

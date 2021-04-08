@@ -59,10 +59,14 @@ it('should compile correctly simple components', () => {
 
     const renderFn = compileToFunction(`
         <template>
-            <div>
-                <p>Hello</p>
-                <p>world!</p>
-            </div>
+            <template if:true={row}>
+                <div>foo</div>
+                <div>bar</div>
+            </template>
+        {row}
+                <span>{row.id}</span>
+    <div><a onclick={handleSelect} data-id={row.id}>{row.label}</a></div>
+    <div><a onclick={handleRemove} data-id={row.id}>Remove</a></div>
         </template>
     `);
     renderFn({})(apis);

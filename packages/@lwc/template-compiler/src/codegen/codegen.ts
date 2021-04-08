@@ -6,8 +6,14 @@
  */
 import * as esutils from 'esutils';
 
-import * as t from '../shared/estree';
 import { toPropertyName } from '../shared/utils';
+
+import { walk } from 'estree-walker';
+import { TEMPLATE_PARAMS } from '../shared/constants';
+import * as t from '../shared/estree';
+import { isComponentProp } from '../shared/ir';
+import { IRNode, TemplateExpression, TemplateIdentifier } from '../shared/types';
+import {NodeRefProxy} from "./NodeRefProxy";
 
 type RenderPrimitive =
     | 'iterator'
@@ -47,6 +53,14 @@ const RENDER_APIS: { [primitive in RenderPrimitive]: RenderPrimitiveDefinition }
     comment: { name: 'co', alias: 'api_comment' },
 };
 
+interface ComponentPropsUsageData {
+    name: string,
+    gen: string,
+    firstUse: NodeRefProxy,
+    replacement: t.MemberExpression | t.Identifier,
+    replaced: boolean,
+}
+
 export default class CodeGen {
     currentId = 0;
     currentKey = 0;
@@ -54,6 +68,71 @@ export default class CodeGen {
     usedApis: { [name: string]: t.Identifier } = {};
     usedSlots: { [name: string]: t.Identifier } = {};
     memorizedIds: t.Identifier[] = [];
+
+    usedProps = new Map<string, ComponentPropsUsageData>();
+
+    getPropName(identifier: TemplateIdentifier): t.MemberExpression | t.Identifier {
+        const { name } = identifier;
+        let memoizedPropName = this.usedProps.get(name);
+
+        if (!memoizedPropName) {
+            const generatedExpr = new NodeRefProxy(t.memberExpression(t.identifier(TEMPLATE_PARAMS.INSTANCE), identifier));
+            memoizedPropName = {
+                name,
+                gen: `$cv${this.usedProps.size}`,
+                firstUse: generatedExpr,
+                replacement: generatedExpr.instance,
+                replaced: false,
+            }
+            this.usedProps.set(name, memoizedPropName);
+        } else if (!memoizedPropName.replaced) {
+            memoizedPropName.firstUse.swap(t.identifier(memoizedPropName.gen));
+            memoizedPropName.replaced = true;
+        }
+
+        return memoizedPropName.replacement;
+    }
+
+    getUsedComponentProperties(): { [name: string]: t.Identifier } {
+        const result: { [name: string]: t.Identifier } = {};
+
+        Array.from(this.usedProps).filter(([,usedPropData]) => {
+            return usedPropData.replaced;
+        }).forEach(([memoizedName, cp ]) => {
+            result[memoizedName] = t.identifier(cp.gen);
+        });
+
+        return result;
+    }
+
+    bindExpression(expression: TemplateExpression, irNode: IRNode): t.Expression {
+        const self = this;
+        if (t.isIdentifier(expression)) {
+            if (isComponentProp(expression, irNode)) {
+                return this.getPropName(expression);
+                // return t.memberExpression(t.identifier(TEMPLATE_PARAMS.INSTANCE), expression);
+            } else {
+                return expression;
+            }
+        }
+
+        walk(expression, {
+            leave(node, parent) {
+                if (
+                    parent !== null &&
+                    t.isIdentifier(node) &&
+                    t.isMemberExpression(parent) &&
+                    parent.object === node &&
+                    isComponentProp(node, irNode)
+                ) {
+                    this.replace(self.getPropName(node));
+                    // this.replace(t.memberExpression(t.identifier(TEMPLATE_PARAMS.INSTANCE), node));
+                }
+            },
+        });
+
+        return expression;
+    }
 
     generateKey() {
         return this.currentKey++;
