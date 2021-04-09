@@ -18,10 +18,25 @@ export function isArrayExpression(node: t.BaseNode): node is t.ArrayExpression {
     return node.type === 'ArrayExpression';
 }
 
+export function isSpreadElement(node: t.BaseNode): node is t.SpreadElement {
+    return node.type === 'SpreadElement';
+}
+
 export function identifier(name: string, config?: Partial<t.Identifier>): t.Identifier {
     return {
         type: 'Identifier',
         name,
+        ...config,
+    };
+}
+
+export function spreadElement(
+    argument: t.Expression,
+    config?: Partial<t.SpreadElement>
+): t.SpreadElement {
+    return {
+        type: 'SpreadElement',
+        argument,
         ...config,
     };
 }
@@ -406,6 +421,7 @@ export type TemplateElement = t.TemplateElement;
 export type ImportDeclaration = t.ImportDeclaration;
 export type ImportDefaultSpecifier = t.ImportDefaultSpecifier;
 export type ImportSpecifier = t.ImportSpecifier;
+export type SpreadElement = t.SpreadElement;
 export type ExportDefaultDeclaration = t.ExportDefaultDeclaration;
 export type Statement = t.Statement;
 export type Program = t.Program;
