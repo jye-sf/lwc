@@ -50,6 +50,7 @@ import {
     isIdReferencingAttribute,
     isSvgUseHref,
 } from '../parser/attribute';
+import { dumpScope } from './scope';
 
 function transform(root: IRElement, codeGen: CodeGen, state: State): t.Expression {
     function transformElement(element: IRElement): t.Expression {
@@ -106,7 +107,9 @@ function transform(root: IRElement, codeGen: CodeGen, state: State): t.Expressio
 
     function transformText(text: IRText): t.Expression {
         const { value } = text;
-        return codeGen.genText(typeof value === 'string' ? value : codeGen.bindExpression(value, text));
+        return codeGen.genText(
+            typeof value === 'string' ? value : codeGen.bindExpression(value, text)
+        );
     }
 
     function transformComment(comment: IRComment): t.Expression {
@@ -118,6 +121,10 @@ function transform(root: IRElement, codeGen: CodeGen, state: State): t.Expressio
             let expr;
 
             if (isElement(child)) {
+                if (child.forEach || child.forOf) {
+                    codeGen.createScope();
+                }
+
                 expr = isTemplate(child) ? transformTemplate(child) : transformElement(child);
             } else if (isTextNode(child)) {
                 expr = transformText(child);
@@ -181,14 +188,23 @@ function transform(root: IRElement, codeGen: CodeGen, state: State): t.Expressio
             params.push(index);
         }
 
-        const iterable = codeGen.bindExpression(expression, element);
-        const iterationFunction = t.functionExpression(
-            null,
+        const forEachFn = codeGen.currentScope.setFn(
             params,
-            t.blockStatement([t.returnStatement(node)])
+            t.blockStatement([t.returnStatement(node)]),
+            'foreach'
         );
 
-        return codeGen.genIterator(iterable, iterationFunction);
+        codeGen.popScope();
+
+        const iterable = codeGen.bindExpression(expression, element);
+        // const iterationFunction = t.functionExpression(
+        //     null,
+        //     params,
+        //     t.blockStatement([t.returnStatement(node)])
+        // );
+
+        return codeGen.genIterator(iterable, forEachFn);
+        // return codeGen.genIterator(iterable, iterationFunction);
     }
 
     function applyInlineForOf(element: IRElement, node: t.Expression) {
@@ -213,19 +229,34 @@ function transform(root: IRElement, codeGen: CodeGen, state: State): t.Expressio
             )
         );
 
-        const iterable = codeGen.bindExpression(expression, element);
-        const iterationFunction = t.functionExpression(
-            null,
+        const forOfFn = codeGen.currentScope.setFn(
             iteratorArgs,
             t.blockStatement([
                 t.variableDeclaration('const', [
                     t.variableDeclarator(t.identifier(iteratorName), iteratorObjet),
                 ]),
                 t.returnStatement(node),
-            ])
+            ]),
+            'forof'
         );
 
-        return codeGen.genIterator(iterable, iterationFunction);
+        codeGen.popScope();
+        // const iterationFunction = t.functionExpression(
+        //     null,
+        //     iteratorArgs,
+        //     t.blockStatement([
+        //         t.variableDeclaration('const', [
+        //             t.variableDeclarator(t.identifier(iteratorName), iteratorObjet),
+        //         ]),
+        //         t.returnStatement(node),
+        //     ])
+        // );
+
+        // still we don't take into account the scope variables, we will soon
+        const iterable = codeGen.bindExpression(expression, element);
+
+        return codeGen.genIterator(iterable, forOfFn);
+        // return codeGen.genIterator(iterable, iterationFunction);
     }
 
     function applyTemplateForOf(element: IRElement, fragmentNodes: t.Expression) {
@@ -250,6 +281,12 @@ function transform(root: IRElement, codeGen: CodeGen, state: State): t.Expressio
         if (!element.if) {
             return fragmentNodes;
         }
+
+        /**
+         * Should generate:
+         *
+         * ...api.ifc(testExpr, ()=>{}, lengthWhenEmpty)fragmentNodes: Array
+         */
 
         if (t.isArrayExpression(fragmentNodes)) {
             // Bind the expression once for all the template children

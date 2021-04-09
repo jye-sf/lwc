@@ -13,7 +13,8 @@ import { TEMPLATE_PARAMS } from '../shared/constants';
 import * as t from '../shared/estree';
 import { isComponentProp } from '../shared/ir';
 import { IRNode, TemplateExpression, TemplateIdentifier } from '../shared/types';
-import {NodeRefProxy} from "./NodeRefProxy";
+import { NodeRefProxy } from './NodeRefProxy';
+import { Scope } from './scope';
 
 type RenderPrimitive =
     | 'iterator'
@@ -54,11 +55,11 @@ const RENDER_APIS: { [primitive in RenderPrimitive]: RenderPrimitiveDefinition }
 };
 
 interface ComponentPropsUsageData {
-    name: string,
-    gen: string,
-    firstUse: NodeRefProxy,
-    replacement: t.MemberExpression | t.Identifier,
-    replaced: boolean,
+    name: string;
+    gen: string;
+    firstUse: NodeRefProxy;
+    replacement: t.MemberExpression | t.Identifier;
+    replaced: boolean;
 }
 
 export default class CodeGen {
@@ -69,21 +70,42 @@ export default class CodeGen {
     usedSlots: { [name: string]: t.Identifier } = {};
     memorizedIds: t.Identifier[] = [];
 
+    currentScope = new Scope();
+
     usedProps = new Map<string, ComponentPropsUsageData>();
+
+    createScope() {
+        const newScope = new Scope();
+
+        newScope.parentScope = this.currentScope;
+        this.currentScope.childScopes.push(newScope);
+
+        this.currentScope = newScope;
+    }
+
+    popScope() {
+        if (this.currentScope.parentScope === null) {
+            throw new Error('Trying to pop root scope');
+        }
+
+        this.currentScope = this.currentScope.parentScope;
+    }
 
     getPropName(identifier: TemplateIdentifier): t.MemberExpression | t.Identifier {
         const { name } = identifier;
         let memoizedPropName = this.usedProps.get(name);
 
         if (!memoizedPropName) {
-            const generatedExpr = new NodeRefProxy(t.memberExpression(t.identifier(TEMPLATE_PARAMS.INSTANCE), identifier));
+            const generatedExpr = new NodeRefProxy(
+                t.memberExpression(t.identifier(TEMPLATE_PARAMS.INSTANCE), identifier)
+            );
             memoizedPropName = {
                 name,
                 gen: `$cv${this.usedProps.size}`,
                 firstUse: generatedExpr,
                 replacement: generatedExpr.instance,
                 replaced: false,
-            }
+            };
             this.usedProps.set(name, memoizedPropName);
         } else if (!memoizedPropName.replaced) {
             memoizedPropName.firstUse.swap(t.identifier(memoizedPropName.gen));
@@ -96,11 +118,13 @@ export default class CodeGen {
     getUsedComponentProperties(): { [name: string]: t.Identifier } {
         const result: { [name: string]: t.Identifier } = {};
 
-        Array.from(this.usedProps).filter(([,usedPropData]) => {
-            return usedPropData.replaced;
-        }).forEach(([memoizedName, cp ]) => {
-            result[memoizedName] = t.identifier(cp.gen);
-        });
+        Array.from(this.usedProps)
+            .filter(([, usedPropData]) => {
+                return usedPropData.replaced;
+            })
+            .forEach(([memoizedName, cp]) => {
+                result[memoizedName] = t.identifier(cp.gen);
+            });
 
         return result;
     }
@@ -181,7 +205,7 @@ export default class CodeGen {
         return this._renderApiCall(RENDER_APIS.comment, [t.literal(value)]);
     }
 
-    genIterator(iterable: t.Expression, callback: t.FunctionExpression) {
+    genIterator(iterable: t.Expression, callback: t.FunctionExpression | t.Identifier) {
         return this._renderApiCall(RENDER_APIS.iterator, [iterable, callback]);
     }
 
