@@ -507,24 +507,24 @@ function generateTemplateFunction(templateRoot: IRElement, state: State): t.Func
         ]),
     ];
 
-    const foo = codeGen.getUsedComponentProperties();
+    // const foo = codeGen.getUsedComponentProperties();
+    //
+    // if (Object.keys(foo).length > 0) {
+    //     body.push(
+    //         t.variableDeclaration('const', [
+    //             t.variableDeclarator(
+    //                 t.objectPattern(
+    //                     Object.keys(foo).map((name) =>
+    //                         t.assignmentProperty(t.identifier(name), foo[name])
+    //                     )
+    //                 ),
+    //                 t.identifier(TEMPLATE_PARAMS.INSTANCE)
+    //             ),
+    //         ])
+    //     );
+    // }
 
-    if (Object.keys(foo).length > 0) {
-        body.push(
-            t.variableDeclaration('const', [
-                t.variableDeclarator(
-                    t.objectPattern(
-                        Object.keys(foo).map((name) =>
-                            t.assignmentProperty(t.identifier(name), foo[name])
-                        )
-                    ),
-                    t.identifier(TEMPLATE_PARAMS.INSTANCE)
-                ),
-            ])
-        );
-    }
-
-    dumpScope(codeGen.currentScope, body);
+    dumpScope(codeGen.currentScope, body, new Map<string, string>());
 
     if (Object.keys(codeGen.usedSlots).length) {
         body.push(

@@ -9,11 +9,9 @@ import * as esutils from 'esutils';
 import { toPropertyName } from '../shared/utils';
 
 import { walk } from 'estree-walker';
-import { TEMPLATE_PARAMS } from '../shared/constants';
 import * as t from '../shared/estree';
 import { isComponentProp } from '../shared/ir';
 import { IRNode, TemplateExpression, TemplateIdentifier } from '../shared/types';
-import { NodeRefProxy } from './NodeRefProxy';
 import { Scope } from './scope';
 
 type RenderPrimitive =
@@ -54,14 +52,6 @@ const RENDER_APIS: { [primitive in RenderPrimitive]: RenderPrimitiveDefinition }
     comment: { name: 'co', alias: 'api_comment' },
 };
 
-interface ComponentPropsUsageData {
-    name: string;
-    gen: string;
-    firstUse: NodeRefProxy;
-    replacement: t.MemberExpression | t.Identifier;
-    replaced: boolean;
-}
-
 export default class CodeGen {
     currentId = 0;
     currentKey = 0;
@@ -71,8 +61,6 @@ export default class CodeGen {
     memorizedIds: t.Identifier[] = [];
 
     currentScope = new Scope();
-
-    usedProps = new Map<string, ComponentPropsUsageData>();
 
     createScope() {
         const newScope = new Scope();
@@ -92,41 +80,28 @@ export default class CodeGen {
     }
 
     getPropName(identifier: TemplateIdentifier): t.MemberExpression | t.Identifier {
-        const { name } = identifier;
-        let memoizedPropName = this.usedProps.get(name);
-
-        if (!memoizedPropName) {
-            const generatedExpr = new NodeRefProxy(
-                t.memberExpression(t.identifier(TEMPLATE_PARAMS.INSTANCE), identifier)
-            );
-            memoizedPropName = {
-                name,
-                gen: `$cv${this.usedProps.size}`,
-                firstUse: generatedExpr,
-                replacement: generatedExpr.instance,
-                replaced: false,
-            };
-            this.usedProps.set(name, memoizedPropName);
-        } else if (!memoizedPropName.replaced) {
-            memoizedPropName.firstUse.swap(t.identifier(memoizedPropName.gen));
-            memoizedPropName.replaced = true;
-        }
-
-        return memoizedPropName.replacement;
-    }
-
-    getUsedComponentProperties(): { [name: string]: t.Identifier } {
-        const result: { [name: string]: t.Identifier } = {};
-
-        Array.from(this.usedProps)
-            .filter(([, usedPropData]) => {
-                return usedPropData.replaced;
-            })
-            .forEach(([memoizedName, cp]) => {
-                result[memoizedName] = t.identifier(cp.gen);
-            });
-
-        return result;
+        return this.currentScope.getPropName(identifier);
+        // const { name } = identifier;
+        // let memoizedPropName = this.usedProps.get(name);
+        //
+        // if (!memoizedPropName) {
+        //     const generatedExpr = new NodeRefProxy(
+        //         t.memberExpression(t.identifier(TEMPLATE_PARAMS.INSTANCE), identifier)
+        //     );
+        //     memoizedPropName = {
+        //         name,
+        //         gen: `$cv${this.usedProps.size}`,
+        //         firstUse: generatedExpr,
+        //         replacement: generatedExpr.instance,
+        //         replaced: false,
+        //     };
+        //     this.usedProps.set(name, memoizedPropName);
+        // } else if (!memoizedPropName.replaced) {
+        //     memoizedPropName.firstUse.swap(t.identifier(memoizedPropName.gen));
+        //     memoizedPropName.replaced = true;
+        // }
+        //
+        // return memoizedPropName.replacement;
     }
 
     bindExpression(expression: TemplateExpression, irNode: IRNode): t.Expression {
