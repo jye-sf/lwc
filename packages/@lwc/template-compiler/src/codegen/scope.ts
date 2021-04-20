@@ -9,8 +9,6 @@ import { TemplateIdentifier } from '../shared/types';
 import { NodeRefProxy } from './NodeRefProxy';
 import { TEMPLATE_PARAMS } from '../shared/constants';
 
-let scopes = 0;
-
 interface ComponentPropsUsageData {
     name: string;
     gen: string;
@@ -40,7 +38,7 @@ export function dumpScope(scope: Scope, body: t.Statement[], scopeVars: Map<stri
         dumpScope(childScope, childScope.mainFn?.body!.body!, nextScope);
     });
 
-    // lastly insert variables defined in this scope at the beginning of the body.
+    // lastly, insert variables defined in this scope at the beginning of the body.
     if (variablesInThisScope.length > 0) {
         body.unshift(
             t.variableDeclaration('const', [
@@ -58,12 +56,16 @@ export function dumpScope(scope: Scope, body: t.Statement[], scopeVars: Map<stri
 }
 
 export class Scope {
-    id: number = ++scopes;
+    id: number;
     parentScope: Scope | null = null;
     childScopes: Scope[] = [];
     mainFn: t.FunctionDeclaration | null = null;
 
     usedProps = new Map<string, ComponentPropsUsageData>();
+
+    constructor(scopeId: number) {
+        this.id = scopeId;
+    }
 
     setFn(
         params: t.FunctionExpression['params'],
@@ -95,11 +97,6 @@ export class Scope {
         }
 
         memoizedPropName.instances++;
-        //
-        // else if (!memoizedPropName.replaced) {
-        //     memoizedPropName.firstUse.swap(t.identifier(memoizedPropName.gen));
-        //     memoizedPropName.replaced = true;
-        // }
 
         return memoizedPropName.usage.instance;
     }
