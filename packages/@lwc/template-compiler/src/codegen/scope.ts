@@ -27,7 +27,7 @@ export function dumpScope(scope: Scope, body: t.Statement[], scopeVars: Map<stri
         const generatedNameInScope = scopeVars.get(name);
         if (generatedNameInScope !== undefined) {
             propData.usage.swap(t.identifier(generatedNameInScope));
-        } else if (propData.instances > 0) {
+        } else if (propData.instances > 1) {
             // name is not defined in the outer scope and is used multiple times in this scope.
             nextScope.set(propData.name, propData.gen);
             propData.usage.swap(t.identifier(propData.gen));
@@ -89,7 +89,7 @@ export class Scope {
                 name,
                 gen: `$cv${this.id}_${this.usedProps.size}`,
                 usage: generatedExpr,
-                instances: 1,
+                instances: 0,
             };
             this.usedProps.set(name, memoizedPropName);
         }

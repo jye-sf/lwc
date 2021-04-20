@@ -158,7 +158,6 @@ function transform(root: IRElement, codeGen: CodeGen, state: State): t.Expressio
     function applyInlineIf(
         element: IRElement,
         node: t.Expression,
-        testExpression?: t.Expression,
         falseValue?: t.Expression
     ): t.Expression {
         if (!element.if) {
@@ -168,19 +167,16 @@ function transform(root: IRElement, codeGen: CodeGen, state: State): t.Expressio
         const ifScope = codeGen.currentScope;
         codeGen.popScope();
 
-        if (!testExpression) {
-            testExpression = codeGen.bindExpression(element.if!, element);
-        }
+        const testExpression = codeGen.bindExpression(element.if!, element);
 
-        const pTestExpr = t.identifier('t');
         let leftExpression: t.Expression;
         const modifier = element.ifModifier!;
         if (modifier === 'true') {
-            leftExpression = pTestExpr;
+            leftExpression = testExpression;
         } else if (modifier === 'false') {
-            leftExpression = t.unaryExpression('!', pTestExpr);
+            leftExpression = t.unaryExpression('!', testExpression);
         } else if (modifier === 'strict-true') {
-            leftExpression = t.binaryExpression('===', pTestExpr, t.literal(true));
+            leftExpression = t.binaryExpression('===', testExpression, t.literal(true));
         } else {
             throw generateCompilerError(TemplateErrors.UNKNOWN_IF_MODIFIER, {
                 messageArgs: [modifier],
@@ -191,17 +187,9 @@ function transform(root: IRElement, codeGen: CodeGen, state: State): t.Expressio
             ? t.arrayExpression(node.elements.map(() => falseValue ?? t.literal(null)))
             : falseValue ?? t.literal(null);
 
-        const params = [pTestExpr];
+        const ifFn = ifScope.setFn([], t.blockStatement([t.returnStatement(node)]), 'if');
 
-        const ifFn = ifScope.setFn(
-            params,
-            t.blockStatement([
-                t.returnStatement(t.conditionalExpression(leftExpression, node, falsyArray)),
-            ]),
-            'if'
-        );
-
-        return t.callExpression(ifFn, [testExpression]);
+        return t.conditionalExpression(leftExpression, t.callExpression(ifFn, []), falsyArray);
     }
 
     function applyInlineFor(element: IRElement, node: t.Expression) {
@@ -297,25 +285,23 @@ function transform(root: IRElement, codeGen: CodeGen, state: State): t.Expressio
         }
 
         if (t.isArrayExpression(fragmentNodes)) {
-            // Bind the expression once for all the template children
-            const testExpression = codeGen.bindExpression(element.if!, element);
-
             // Notice that no optimization can be done when there's only one element, because it may be an if call
             // which uses the spread element.
             if (
                 fragmentNodes.elements.length === 1 &&
                 fragmentNodes.elements[0]?.type !== 'SpreadElement'
             ) {
-                return applyInlineIf(element, fragmentNodes.elements[0]!, testExpression);
+                return applyInlineIf(element, fragmentNodes.elements[0]!);
             }
 
-            const ifCall = applyInlineIf(element, fragmentNodes, testExpression);
+            const ifConditional = applyInlineIf(element, fragmentNodes);
 
-            // The if's will always be inside an [];
-            return t.spreadElement(ifCall);
+            // This will generate something like ...$cv1_0 ? if2_0() : [null, null]; notice that the
+            // conditional expression has precedence
+            return t.spreadElement(ifConditional);
         } else {
             // If the template has a single children, make sure the ternary expression returns an array
-            return applyInlineIf(element, fragmentNodes, undefined, t.arrayExpression([]));
+            return applyInlineIf(element, fragmentNodes, t.arrayExpression([]));
         }
     }
 
