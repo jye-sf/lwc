@@ -15,6 +15,7 @@ export interface Config {
         /** Name of the module to resolve custom properties lookup */
         resolverModule?: string;
     };
+    scopeToken?: string;
 }
 
 export function transform(src: string, id: string, config: Config = {}): { code: string } {
@@ -22,7 +23,8 @@ export function transform(src: string, id: string, config: Config = {}): { code:
         return { code: 'export default undefined' };
     }
 
-    const plugins = [postcssLwc()];
+    const isScoped = !!config.scopeToken;
+    const plugins = [postcssLwc({ isScoped })];
 
     const result = postcss(plugins).process(src, { from: id }).sync();
 

@@ -28,6 +28,17 @@ function isImplicitHTMLImport(importee, importer) {
     );
 }
 
+function parseQueryParamsForScopeToken(id) {
+    const [filename, query] = id.split('?', 2);
+    const params = query && new URLSearchParams(query);
+    const scopeToken = params && params.get('scopeToken');
+    return {
+        filename,
+        query,
+        scopeToken,
+    };
+}
+
 module.exports = function rollupLwcCompiler(pluginOptions = {}) {
     const { include, exclude } = pluginOptions;
     const filter = pluginUtils.createFilter(include, exclude);
@@ -45,7 +56,18 @@ module.exports = function rollupLwcCompiler(pluginOptions = {}) {
             customResolvedModules = [...userModules, ...DEFAULT_MODULES, { dir: customRootDir }];
         },
 
-        resolveId(importee, importer) {
+        async resolveId(importee, importer) {
+            const { filename, query, scopeToken } = parseQueryParamsForScopeToken(importee);
+            if (scopeToken) {
+                // handle light DOM scoped CSS
+                // Resolve without the query param. Use skipSelf to avoid infinite loops
+                const resolved = await this.resolve(filename, importer, { skipSelf: true });
+                if (resolved) {
+                    resolved.id += `?${query}`;
+                    return resolved;
+                }
+            }
+
             // Normalize relative import to absolute import
             // Note that in @rollup/plugin-node-resolve v13, relative imports will sometimes
             // be in absolute format (e.g. "/path/to/module.js") so we have to check that as well.
@@ -81,11 +103,21 @@ module.exports = function rollupLwcCompiler(pluginOptions = {}) {
                 return EMPTY_IMPLICIT_HTML_CONTENT;
             }
 
-            const exists = fs.existsSync(id);
+            const { filename, scopeToken } = parseQueryParamsForScopeToken(id);
+            if (scopeToken) {
+                id = filename; // remove query param
+            }
+
             const isCSS = path.extname(id) === '.css';
 
-            if (!exists && isCSS) {
-                return '';
+            if (isCSS) {
+                const exists = fs.existsSync(id);
+                if (!exists) {
+                    return '';
+                } else if (scopeToken) {
+                    // load the file ourselves without the query param
+                    return fs.readFileSync(filename, 'utf-8');
+                }
             }
         },
 
@@ -98,6 +130,11 @@ module.exports = function rollupLwcCompiler(pluginOptions = {}) {
             // Extract module name and namespace from file path
             const [namespace, name] = path.dirname(id).split(path.sep).slice(-2);
 
+            const { filename, scopeToken } = parseQueryParamsForScopeToken(id);
+            if (scopeToken) {
+                id = filename; // remove query param
+            }
+
             const { code, map } = compiler.transformSync(src, id, {
                 name,
                 namespace,
@@ -105,6 +142,7 @@ module.exports = function rollupLwcCompiler(pluginOptions = {}) {
                 stylesheetConfig: pluginOptions.stylesheetConfig,
                 experimentalDynamicComponent: pluginOptions.experimentalDynamicComponent,
                 preserveHtmlComments: pluginOptions.preserveHtmlComments,
+                cssScopeToken: scopeToken,
             });
 
             return { code, map };

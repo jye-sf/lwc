@@ -12,6 +12,7 @@ import {
     isArray,
     isFunction,
     isNull,
+    isTrue,
     isUndefined,
     toString,
 } from '@lwc/shared';
@@ -20,34 +21,17 @@ import { VNode, VNodes } from '../3rdparty/snabbdom/types';
 import * as api from './api';
 import { RenderAPI } from './api';
 import { RenderMode } from './def';
-import {
-    resetComponentRoot,
-    runWithBoundaryProtection,
-    ShadowMode,
-    SlotSet,
-    TemplateCache,
-    VM,
-} from './vm';
+import { resetComponentRoot, runWithBoundaryProtection, SlotSet, TemplateCache, VM } from './vm';
 import { EmptyArray } from './utils';
 import { defaultEmptyTemplate, isTemplateRegistered } from './secure-template';
 import {
     TemplateStylesheetFactories,
     createStylesheet,
     getStylesheetsContent,
-    updateSyntheticShadowAttributes,
+    updateStylesheetToken,
 } from './stylesheet';
 import { logOperationStart, logOperationEnd, OperationId, trackProfilerState } from './profiler';
 import { getTemplateOrSwappedTemplate, setActiveVM } from './hot-swaps';
-
-export interface TemplateStylesheetTokens {
-    /** HTML attribute that need to be applied to the host element. This attribute is used for
-     * the `:host` pseudo class CSS selector. */
-    hostAttribute: string;
-    /** HTML attribute that need to the applied to all the element that the template produces.
-     * This attribute is used for style encapsulation when the engine runs with synthetic
-     * shadow. */
-    shadowAttribute: string;
-}
 
 export interface Template {
     (api: RenderAPI, cmp: object, slotSet: SlotSet, cache: TemplateCache): VNodes;
@@ -56,8 +40,8 @@ export interface Template {
     slots?: string[];
     /** The stylesheet associated with the template. */
     stylesheets?: TemplateStylesheetFactories;
-    /** The stylesheet tokens used for synthetic shadow style scoping. */
-    stylesheetTokens?: TemplateStylesheetTokens;
+    /** The string used for synthetic shadow style scoping and light DOM style scoping. */
+    stylesheetToken?: string;
     /** Render mode for the template. Could be light or undefined (which means it's shadow) */
     renderMode?: 'light';
 }
@@ -148,7 +132,7 @@ export function evaluateTemplate(vm: VM, html: Template): Array<VNode | null> {
         },
         () => {
             // job
-            const { component, context, cmpSlots, cmpTemplate, tro, shadowMode } = vm;
+            const { component, context, cmpSlots, cmpTemplate, tro } = vm;
             tro.observe(() => {
                 // Reset the cache memoizer for template when needed.
                 if (html !== cmpTemplate) {
@@ -180,9 +164,7 @@ export function evaluateTemplate(vm: VM, html: Template): Array<VNode | null> {
                     context.tplCache = create(null);
 
                     // Update the synthetic shadow attributes on the host element if necessary.
-                    if (shadowMode === ShadowMode.Synthetic) {
-                        updateSyntheticShadowAttributes(vm, html);
-                    }
+                    updateStylesheetToken(vm, html);
 
                     // Evaluate, create stylesheet and cache the produced VNode for future
                     // re-rendering.
@@ -230,4 +212,18 @@ export function evaluateTemplate(vm: VM, html: Template): Array<VNode | null> {
         );
     }
     return vnodes;
+}
+
+export function hasScopedStyles(template: Template | null): boolean {
+    const stylesheets = template?.stylesheets;
+    if (!isUndefined(stylesheets) && stylesheets.length !== 0) {
+        for (let i = 0; i < stylesheets.length; i++) {
+            // eslint-disable-next-line lwc-internal/no-invalid-todo
+            // TODO: figure out a better way to mark stylesheets as scoped, don't recalc this over and over
+            if (isTrue((stylesheets[i] as any).$scoped$)) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
