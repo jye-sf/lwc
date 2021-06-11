@@ -2,6 +2,7 @@ import { createElement, setFeatureFlagForTest } from 'lwc';
 import Basic from 'x/basic';
 import Other from 'x/other';
 import Switchable from 'x/switchable';
+import Unscoped from 'x/unscoped';
 
 describe('Light DOM scoped CSS', () => {
     beforeEach(() => {
@@ -56,5 +57,14 @@ describe('Light DOM scoped CSS', () => {
                 expect(getComputedStyle(elm).marginLeft).toEqual('30px');
                 expect(getComputedStyle(elm.querySelector('div')).color).toEqual('rgb(0, 0, 255)');
             });
+    });
+
+    it('only applies styling tokens if scoped styles are present', () => {
+        const elm = createElement('x-unscoped', { is: Unscoped });
+
+        document.body.appendChild(elm);
+
+        expect(elm.classList.length).toEqual(0);
+        expect(elm.querySelector('div').classList.length).toEqual(0);
     });
 });
