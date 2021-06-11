@@ -3,6 +3,7 @@ import Basic from 'x/basic';
 import Other from 'x/other';
 import Switchable from 'x/switchable';
 import Unscoped from 'x/unscoped';
+import ShadowWithScoped from 'x/shadowWithScoped';
 
 describe('Light DOM scoped CSS', () => {
     beforeEach(() => {
@@ -66,5 +67,14 @@ describe('Light DOM scoped CSS', () => {
 
         expect(elm.classList.length).toEqual(0);
         expect(elm.querySelector('div').classList.length).toEqual(0);
+    });
+
+    it('disallows scoped styles for shadow components', () => {
+        expect(() => {
+            const elm = createElement('x-shadow-with-scoped', { is: ShadowWithScoped });
+            document.body.appendChild(elm);
+        }).toThrowError(
+            "Assert Violation: Shadow DOM components template can't use scoped styles (*.scoped.css). Use a regular *.css file."
+        );
     });
 });

@@ -101,6 +101,10 @@ function validateLightDomTemplate(template: Template, vm: VM) {
             isUndefined(template.renderMode),
             `Shadow DOM components template can't render light DOM templates. Either remove the 'lwc:render-mode' directive or set it to 'lwc:render-mode="shadow"`
         );
+        assert.isFalse(
+            hasScopedStyles(template),
+            `Shadow DOM components template can't use scoped styles (*.scoped.css). Use a regular *.css file.`
+        );
     }
 }
 
