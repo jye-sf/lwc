@@ -15,6 +15,7 @@ import {
     isTrue,
     isUndefined,
     toString,
+    KEY__SCOPED_CSS,
 } from '@lwc/shared';
 import { logError } from '../shared/logger';
 import { VNode, VNodes } from '../3rdparty/snabbdom/types';
@@ -218,9 +219,7 @@ export function hasScopedStyles(template: Template | null): boolean {
     const stylesheets = template?.stylesheets;
     if (!isUndefined(stylesheets) && stylesheets.length !== 0) {
         for (let i = 0; i < stylesheets.length; i++) {
-            // eslint-disable-next-line lwc-internal/no-invalid-todo
-            // TODO: figure out a better way to mark stylesheets as scoped, don't recalc this over and over
-            if (isTrue((stylesheets[i] as any).$scoped$)) {
+            if (isTrue((stylesheets[i] as any)[KEY__SCOPED_CSS])) {
                 return true;
             }
         }
