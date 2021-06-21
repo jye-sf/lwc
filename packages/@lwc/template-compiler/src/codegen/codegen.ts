@@ -6,9 +6,9 @@
  */
 import * as esutils from 'esutils';
 
+import { walk } from 'estree-walker';
 import { toPropertyName } from '../shared/utils';
 
-import { walk } from 'estree-walker';
 import * as t from '../shared/estree';
 import { isComponentProp } from '../shared/ir';
 import { IRNode, TemplateExpression } from '../shared/types';
