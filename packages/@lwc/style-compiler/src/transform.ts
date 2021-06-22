@@ -15,6 +15,7 @@ export interface Config {
         /** Name of the module to resolve custom properties lookup */
         resolverModule?: string;
     };
+    /** Token that is used for scoping in light DOM scoped styles */
     scopeToken?: string;
 }
 
