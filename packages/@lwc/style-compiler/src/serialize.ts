@@ -61,9 +61,9 @@ export default function serialize(result: Result, config: Config): string {
             // light DOM scoped CSS, the string is always exactly the same
             // TODO [#2368]: this could be made more efficient by just directly putting a string here
             buffer += `function stylesheet() {\n`;
-            buffer += `var ${HOST_SELECTOR_IDENTIFIER} = ".${config.scopeToken}-host";\n`;
-            buffer += `var ${SHADOW_SELECTOR_IDENTIFIER} = ".${config.scopeToken}";\n`;
-            buffer += `var ${SHADOW_DOM_ENABLED_IDENTIFIER} = false;\n`;
+            buffer += `  var ${HOST_SELECTOR_IDENTIFIER} = ".${config.scopeToken}-host";\n`;
+            buffer += `  var ${SHADOW_SELECTOR_IDENTIFIER} = ".${config.scopeToken}";\n`;
+            buffer += `  var ${SHADOW_DOM_ENABLED_IDENTIFIER} = false;\n`;
             buffer += `  return ${serializedStyle};\n`;
             buffer += `}\n`;
             buffer += `stylesheet.${KEY__SCOPED_CSS} = true;\n`;
