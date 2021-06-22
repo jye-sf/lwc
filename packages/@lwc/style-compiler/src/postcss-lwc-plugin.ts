@@ -29,7 +29,7 @@ function selectorProcessorFactory(transformConfig: SelectorScopingConfig) {
     });
 }
 
-export type PostCssLwcPluginOptions = {
+export interface PostCssLwcPluginOptions {
     isScoped: boolean;
 };
 
