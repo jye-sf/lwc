@@ -14,7 +14,6 @@ type RecursiveRequired<T> = {
 const DEFAULT_OPTIONS = {
     isExplicitImport: false,
     preserveHtmlComments: false,
-    cssScopeToken: undefined,
 };
 
 const DEFAULT_DYNAMIC_CMP_CONFIG: Required<DynamicComponentConfig> = {
@@ -67,7 +66,7 @@ export interface TransformOptions {
     outputConfig?: OutputConfig;
     isExplicitImport?: boolean;
     preserveHtmlComments?: boolean;
-    cssScopeToken: string | undefined;
+    cssScopeToken?: string;
 }
 
 type RequiredTransformOptions = Omit<TransformOptions, 'name' | 'namespace'>;
@@ -157,5 +156,5 @@ function normalizeOptions(options: TransformOptions): NormalizedTransformOptions
         stylesheetConfig,
         outputConfig,
         experimentalDynamicComponent,
-    };
+    } as NormalizedTransformOptions;
 }
