@@ -22,7 +22,6 @@ import modComputedClassName from './modules/computed-class-attr';
 import modComputedStyle from './modules/computed-style-attr';
 import modStaticClassName from './modules/static-class-attr';
 import modStaticStyle from './modules/static-style-attr';
-import { hasScopedStyles } from './template';
 import { updateDynamicChildren, updateStaticChildren } from '../3rdparty/snabbdom/snabbdom';
 import { patchElementWithRestrictions, unlockDomMutation, lockDomMutation } from './restrictions';
 import { getComponentInternalDef, RenderMode } from './def';
@@ -38,9 +37,9 @@ function setElementShadowToken(elm: Element, token: string | undefined) {
 }
 
 function setLightDomScopingTokenIfNecessary(elm: Element, owner: VM) {
-    const { cmpTemplate } = owner;
+    const { cmpTemplate, context } = owner;
     const token = cmpTemplate?.stylesheetToken;
-    if (!isUndefined(token) && hasScopedStyles(cmpTemplate)) {
+    if (!isUndefined(token) && context.hasScopedStyles) {
         owner.renderer.getClassList(elm).add(token);
     }
 }

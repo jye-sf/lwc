@@ -102,7 +102,7 @@ function validateLightDomTemplate(template: Template, vm: VM) {
             `Shadow DOM components template can't render light DOM templates. Either remove the 'lwc:render-mode' directive or set it to 'lwc:render-mode="shadow"`
         );
         assert.isFalse(
-            hasScopedStyles(template),
+            computeHasScopedStyles(template),
             `Shadow DOM components template can't use scoped styles (*.scoped.css). Use a regular *.css file.`
         );
     }
@@ -168,6 +168,9 @@ export function evaluateTemplate(vm: VM, html: Template): Array<VNode | null> {
                     // Create a brand new template cache for the swapped templated.
                     context.tplCache = create(null);
 
+                    // Set the computeHasScopedStyles property in the context, to avoid recomputing it repeatedly.
+                    context.hasScopedStyles = computeHasScopedStyles(html);
+
                     // Update the synthetic shadow attributes on the host element if necessary.
                     updateStylesheetToken(vm, html);
 
@@ -219,7 +222,7 @@ export function evaluateTemplate(vm: VM, html: Template): Array<VNode | null> {
     return vnodes;
 }
 
-export function hasScopedStyles(template: Template | null): boolean {
+export function computeHasScopedStyles(template: Template | null): boolean {
     const stylesheets = template?.stylesheets;
     if (!isUndefined(stylesheets) && stylesheets.length !== 0) {
         for (let i = 0; i < stylesheets.length; i++) {

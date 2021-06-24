@@ -9,7 +9,7 @@ import { isArray, isUndefined, ArrayJoin, ArrayPush } from '@lwc/shared';
 import * as api from './api';
 import { VNode } from '../3rdparty/snabbdom/types';
 import { RenderMode, ShadowMode, VM } from './vm';
-import { hasScopedStyles, Template } from './template';
+import { Template } from './template';
 import { getStyleOrSwappedStyle } from './hot-swaps';
 
 /**
@@ -75,7 +75,7 @@ export function updateStylesheetToken(vm: VM, template: Template) {
     if (
         !isUndefined(newStylesheets) &&
         newStylesheets.length !== 0 &&
-        (isSyntheticShadow || hasScopedStyles(template))
+        (isSyntheticShadow || context.hasScopedStyles)
     ) {
         newToken = newStylesheetToken;
     }
