@@ -31,7 +31,7 @@ function selectorProcessorFactory(transformConfig: SelectorScopingConfig) {
 
 export interface PostCssLwcPluginOptions {
     isScoped: boolean;
-};
+}
 
 export default function postCssLwcPlugin(options: PostCssLwcPluginOptions): TransformCallback {
     // We need 2 types of selectors processors, since transforming the :host selector make the selector
