@@ -56,18 +56,7 @@ module.exports = function rollupLwcCompiler(pluginOptions = {}) {
             customResolvedModules = [...userModules, ...DEFAULT_MODULES, { dir: customRootDir }];
         },
 
-        async resolveId(importee, importer) {
-            const { filename, query, scopeToken } = parseQueryParamsForScopeToken(importee);
-            if (scopeToken) {
-                // handle light DOM scoped CSS
-                // Resolve without the query param. Use skipSelf to avoid infinite loops
-                const resolved = await this.resolve(filename, importer, { skipSelf: true });
-                if (resolved) {
-                    resolved.id += `?${query}`;
-                    return resolved;
-                }
-            }
-
+        resolveId(importee, importer) {
             // Normalize relative import to absolute import
             // Note that in @rollup/plugin-node-resolve v13, relative imports will sometimes
             // be in absolute format (e.g. "/path/to/module.js") so we have to check that as well.
