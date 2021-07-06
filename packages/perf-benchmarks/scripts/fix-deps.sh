@@ -8,6 +8,7 @@
 # Create symlinks in the local node_modules directory to point to the root ones.
 # This is bizarre, but it seems to be the only way to get Tachometer to recognize
 # our local deps, e.g. when running in `this-patch` mode (not `tip-of-tree` mode).
+# See: https://github.com/Polymer/tachometer/issues/215
 
 set -e
 

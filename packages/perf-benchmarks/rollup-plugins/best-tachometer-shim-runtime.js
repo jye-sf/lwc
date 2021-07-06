@@ -54,6 +54,7 @@ async function runBenchmark() {
     performance.mark('benchmark-after-start');
     await Promise.all(afters.map((after) => after()));
     performance.measure('benchmark-after', 'benchmark-after-start');
+    console.log('Benchmark complete'); // eslint-disable-line no-console
 }
 
 window.before = before;
