@@ -4,7 +4,14 @@
  * SPDX-License-Identifier: MIT
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/MIT
  */
-import { startMeasure, endMeasure, MeasurementPhase } from './performance-timing';
+import {
+    startMeasure,
+    endMeasure,
+    MeasurementPhase,
+    startGlobalMeasure,
+    GlobalMeasurementPhase,
+    endGlobalMeasure,
+} from './performance-timing';
 import { VM } from './vm';
 
 function noop(_opId: number, _phase: number, _cmpName: string, _vm_idx: number) {}
@@ -118,4 +125,23 @@ const profilerControl = {
     detachDispatcher,
 };
 
-export { logOperationStart, logOperationEnd, trackProfilerState, profilerControl };
+function logGlobalOperationStart(phase: GlobalMeasurementPhase, vm?: VM) {
+    if (logMarks) {
+        startGlobalMeasure(phase, vm);
+    }
+}
+
+function logGlobalOperationEnd(phase: GlobalMeasurementPhase, vm?: VM) {
+    if (logMarks) {
+        endGlobalMeasure(phase, vm);
+    }
+}
+
+export {
+    logOperationStart,
+    logOperationEnd,
+    trackProfilerState,
+    profilerControl,
+    logGlobalOperationStart,
+    logGlobalOperationEnd,
+};
