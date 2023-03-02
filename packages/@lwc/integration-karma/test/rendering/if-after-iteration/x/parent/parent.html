@@ -1,0 +1,11 @@
+<template>
+    <template for:each={items} for:item="item">
+        <div key={item}>
+            {item}
+        </div>
+    </template>
+    <template lwc:if={items.length}>
+        test
+    </template>
+    <button onclick={addItem}>add</button>
+</template>
