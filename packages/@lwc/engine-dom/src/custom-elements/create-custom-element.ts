@@ -36,7 +36,7 @@ function createBaseUpgradableConstructor() {
         constructor(upgradeCallback: LifecycleCallback, useNativeLifecycle: boolean) {
             super();
 
-            if (useNativeLifecycle) {
+            if (useNativeLifecycle && this.tagName.toLowerCase() !== 'x-child') {
                 // When in native lifecycle mode, we need to keep track of instances that were created outside LWC
                 // (i.e. not created by `lwc.createElement()`). If the element uses synthetic lifecycle, then we don't
                 // need to track this.
